@@ -2,6 +2,8 @@ package com.example.task01;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 public class Task01Main {
     public static void main(String[] args) throws IOException, InterruptedException {
@@ -14,7 +16,21 @@ public class Task01Main {
     }
 
     public static String extractSoundName(File file) throws IOException, InterruptedException {
-        // your implementation here
-        return "sound name";
+        Process process = new ProcessBuilder(
+                "ffprobe", "-v", "error", "-show_entries", "format_tags=title",
+                "-of", "default=noprint_wrappers=1:nokey=1", file.getAbsolutePath())
+                .redirectError(ProcessBuilder.Redirect.DISCARD)
+                .start();
+
+        try (InputStream output = process.getInputStream()) {
+            String title = new String(output.readAllBytes(), StandardCharsets.UTF_8);
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                throw new IOException("ffprobe exited with code " + exitCode + " for " + file);
+            }
+            return title.replaceFirst("\\r?\\n\\z", "");
+        } finally {
+            process.destroy();
+        }
     }
 }
